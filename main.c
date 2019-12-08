@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #define INFINITO 999999
 struct vertice{
     char estado[3];
@@ -34,8 +35,50 @@ int menorValor(int a,int b){
         return a;
     }
     return b;
-    
+
 }
+struct Aresta{
+    int indiceOrigem;
+    int indiceDestino;
+    int peso;
+    char tempoViagem[100];
+};
+typedef struct Aresta pseudoAresta;
+void scan_quote_string(char *str) {
+
+	/*
+	*	Use essa função para ler um campo string delimitado entre aspas (").
+	*	Chame ela na hora que for ler tal campo. Por exemplo:
+	*
+	*	A entrada está da seguinte forma:
+	*		nomeDoCampo "MARIA DA SILVA"
+	*
+	*	Para ler isso para as strings já alocadas str1 e str2 do seu programa, você faz:
+	*		scanf("%s", str1); // Vai salvar nomeDoCampo em str1
+	*		scan_quote_string(str2); // Vai salvar MARIA DA SILVA em str2 (sem as aspas)
+	*
+	*/
+
+	char R;
+
+	while((R = getchar()) != EOF && isspace(R)); // ignorar espaços, \r, \n...
+
+	if(R == 'N' || R == 'n') { // campo NULO
+		getchar(); getchar(); getchar(); // ignorar o "ULO" de NULO.
+		strcpy(str, ""); // copia string vazia
+	} else if(R == '\"') {
+		if(scanf("%[^\"]", str) != 1) { // ler até o fechamento das aspas
+			strcpy(str, "");
+		}
+		getchar(); // ignorar aspas fechando
+	} else if(R != EOF){ // vc tá tentando ler uma string que não tá entre aspas! Fazer leitura normal %s então...
+		str[0] = R;
+		scanf("%s", &str[1]);
+	} else { // EOF
+		strcpy(str, "");
+	}
+}
+
 void lerAtePipe(char *campo,FILE *file){
     char c;
     int contador = 0;
@@ -183,6 +226,10 @@ void GerarGrafo(Grafo *grafo,char *nomeArquivo){
     int rrn = 0;
     int contador = 0;
     FILE *file = fopen(nomeArquivo,"rb");
+    if(!file){
+        printf("Falha no carregamento do arquivo.");
+        return; // caso tenha ocorrido algum erro com o arquivo, retorna 0
+    }
     Cabecalho c = leCabecalho(file);
     grafo->nArestas = 0;
     grafo->Nvertices = 0;
@@ -228,13 +275,17 @@ void imprimeGrafo(Grafo grafo){
     aux = grafo.adj[i];
     while(aux!=NULL){
         if(aux->peso == -1){
-            printf("%s %s ",aux->v.estado,aux->v.nome);
+            printf("%s %s",aux->v.nome,aux->v.estado);
             aux=aux->prox;
         }
-        printf("%s %s %d %s ",aux->v.estado,aux->v.nome,aux->peso,aux->tempoviagem);
+        if(!(strncmp(aux->tempoviagem,"\0",1))){
+            printf(" %s %s %d",aux->v.nome,aux->v.estado,aux->peso);
+        }else{
+            printf(" %s %s %d %s",aux->v.nome,aux->v.estado,aux->peso,aux->tempoviagem);
+        }
         aux=aux->prox;
-    }  
-    printf("\n"); 
+    }
+    printf("\n");
    }
 }
 int verificaAbertos(int *abertos,int tamanho){
@@ -261,6 +312,9 @@ int **djkstra(char* nomeCidadeOrigem,Grafo grafo){
         abertos[i] = 1;
     }
     int posicao = buscaRetIndice(grafo.adj,aux,grafo.Nvertices);
+    if(posicao == -1){
+        printf("Cidade inexistente.");
+    }
     antecessores[posicao] = posicao;
     distancias[posicao] = 0;
     while(verificaAbertos(abertos,grafo.Nvertices)){
@@ -277,14 +331,14 @@ int **djkstra(char* nomeCidadeOrigem,Grafo grafo){
                 continue;
             }
             arestaAux = arestaAux->prox;
-            
+
             while(arestaAux != NULL){
                 indiceaux = buscaRetIndice(grafo.adj,arestaAux->v,grafo.Nvertices);
                 if(distancias[indiceatual]+arestaAux->peso < distancias[indiceaux]){
                     distancias[indiceaux] = distancias[indiceatual]+arestaAux->peso;
                     antecessores[indiceaux] = indiceatual;
                 }
-
+            arestaAux = arestaAux->prox;
             }
     }
     //retorna o vetor distancias e o vetor antecessores
@@ -293,32 +347,129 @@ int **djkstra(char* nomeCidadeOrigem,Grafo grafo){
     retorno[1] = antecessores;
     return retorno;
 }
+
+void exibirDijkstra(char* valorCampo,Grafo grafo){
+    Vertice aux;
+    Vertice auxAnt;
+    strcpy(aux.nome,valorCampo);
+    int Origem = buscaRetIndice(grafo.adj,aux,grafo.Nvertices);
+    strcpy(aux.estado, grafo.adj[Origem]->v.estado);
+    int **resultado = djkstra(valorCampo,grafo);
+    int *distancias = resultado[0]; // ditancias 1, distancia da origem ate a posicao 1
+    int *posAnterior = resultado[1]; // posicao 1 tem o cara anterior a posicao 1 
+    for (int i = 0; i < grafo.Nvertices; i++){
+       if(i != Origem){
+            strcpy(auxAnt.nome, grafo.adj[posAnterior[i]]->v.nome);
+            strcpy(auxAnt.estado, grafo.adj[posAnterior[i]]->v.estado);
+            printf("%s %s %s %s %d %s %s \n",aux.nome,aux.estado,grafo.adj[i]->v.nome,grafo.adj[i]->v.estado,distancias[i],auxAnt.nome,auxAnt.estado); 
+       }
+    }
+    //printf("%s %s ",aux.nome,aux.estado);
+    
+}
+
+int verificaVertices(int *arvore,int tamanho){
+    for(int i = 0;i < tamanho;i++){
+        if(arvore[i] == -1){
+            return 0;
+        }
+    }
+    return 1;
+}
+pseudoAresta *prim(char* nomeCidadeOrigem,Grafo grafo){
+    pseudoAresta *auxAresta = calloc(grafo.nArestas,sizeof(pseudoAresta));
+    Vertice aux;
+    link arestaAux;
+    int menorPeso;
+    link menorAresta;
+    int indiceMenorPeso;
+    strcpy(aux.nome,nomeCidadeOrigem);
+    int arvore[grafo.Nvertices];
+    for(int i = 0;i < grafo.Nvertices;i++){
+        arvore[i] = -1;
+    }
+    int indice = buscaRetIndice(grafo.adj,aux,grafo.Nvertices);
+    arvore[indice] = 1;
+    int j = 0;
+    while(!verificaVertices(arvore,grafo.Nvertices)){
+        menorPeso = INFINITO;
+        for(int i = 0;i < grafo.Nvertices;i++){
+            if(arvore[i] == 1){//faz parte da arvore
+                arestaAux = grafo.adj[i];
+                if(arestaAux->prox == NULL){
+                    continue;
+                }
+                arestaAux = arestaAux->prox;
+                while(arestaAux != NULL){
+                    if(arestaAux->peso < menorPeso && arvore[buscaRetIndice(grafo.adj,arestaAux->v,grafo.Nvertices)] != 1){
+                        menorPeso = arestaAux->peso;
+                        menorAresta = arestaAux;
+                        indiceMenorPeso = i;
+                    }
+                }
+            }
+        }
+            auxAresta[j].indiceOrigem = indiceMenorPeso;
+            auxAresta[j].indiceDestino = buscaRetIndice(grafo.adj,arestaAux->v,grafo.Nvertices);
+            auxAresta[j].peso = menorAresta->peso;
+            strcpy(auxAresta[j].tempoViagem,auxAresta->tempoViagem);
+            arvore[auxAresta[j].indiceDestino] = 1;
+            j++;
+    }
+    return auxAresta;
+}
+
+void exibirPrim(char* valorCampo,Grafo grafo){
+    Vertice aux;
+    Vertice auxAnt;
+    strcpy(aux.nome,valorCampo);
+    int Origem = buscaRetIndice(grafo.adj,aux,grafo.Nvertices);
+    strcpy(aux.estado, grafo.adj[Origem]->v.estado);
+    int **resultado = djkstra(valorCampo,grafo);
+    int *distancias = resultado[0]; // ditancias 1, distancia da origem ate a posicao 1
+    int *posAnterior = resultado[1]; // posicao 1 tem o cara anterior a posicao 1 
+    for (int i = 0; i < grafo.Nvertices; i++){
+       if(i != Origem){
+            strcpy(auxAnt.nome, grafo.adj[posAnterior[i]]->v.nome);
+            strcpy(auxAnt.estado, grafo.adj[posAnterior[i]]->v.estado);
+            printf("%s %s %s %s %d %s %s \n",aux.nome,aux.estado,grafo.adj[i]->v.nome,grafo.adj[i]->v.estado,distancias[i],auxAnt.nome,auxAnt.estado); 
+       }
+    }
+    //printf("%s %s ",aux.nome,aux.estado);
+    
+}
+
 int main(int argc, char const *argv[])
 {
-    /*
-   Vertice v1;
-   strcpy(v1.nome,"acidade");
-   Vertice v2;
-   strcpy(v2.nome,"bcidade");
-   Vertice v3;
-   strcpy(v3.nome,"dcidade");
-   Vertice v4;
-   strcpy(v4.nome,"ccidade");
-    Vertice v5;
-   strcpy(v5.nome,"TESTE");
-   Grafo grafo;
-   grafo.Nvertices = 0;
-   grafo.adj = malloc(4*sizeof(link));
-   insereVerticeOrdenado(v1,&grafo,grafo.adj);
-   insereVerticeOrdenado(v2,&grafo,grafo.adj);
-   insereVerticeOrdenado(v3,&grafo,grafo.adj);
-   insereVerticeOrdenado(v4,&grafo,grafo.adj);
-   int d = buscaRetIndice(grafo.adj,v5,grafo.Nvertices);
-   //Ate aqui ta fino
-   printf("%d",d);
-    */
-   Grafo grafo;
-   char nome[50] =  "caso03.bin";
-   GerarGrafo(&grafo,nome);
-   imprimeGrafo(grafo);
+  Grafo grafo;
+  char nomeArq[50];
+  char cidadeOrigm[50];
+  char valorCampo[50];
+  int opt; /* Opção do switch case.*/
+  scanf("%d", &opt);  /* Digita o número da opção a ser considerada */
+  switch (opt){
+    case 9:
+        scanf("%s",nomeArq); /* Digita o nome do arquivo csv.*/
+        GerarGrafo(&grafo,nomeArq);
+        imprimeGrafo(grafo);
+        break;
+    case 10:
+        scanf("%s",nomeArq); /* Digita o nome do arquivo csv.*/
+        scanf("%s",cidadeOrigm);
+        scan_quote_string(valorCampo);
+        if(GerarGrafo(&grafo,nomeArq)){
+            exibirDijkstra(valorCampo,grafo);
+        }
+    break;
+    case 11:
+        scanf("%s",nomeArq); /* Digita o nome do arquivo csv.*/
+        scanf("%s",cidadeOrigm);
+        scan_quote_string(valorCampo);
+        if(GerarGrafo(&grafo,nomeArq)){
+            exibirPrim(valorCampo,grafo);
+        }
+    break;
+
+  }
+   return 1;
 }
