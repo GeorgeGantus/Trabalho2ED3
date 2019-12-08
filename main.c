@@ -303,8 +303,8 @@ int **djkstra(char* nomeCidadeOrigem,Grafo grafo){
     int indiceatual;
     link arestaAux;
     strcpy(aux.nome,nomeCidadeOrigem);
-    int antecessores[grafo.Nvertices];
-    int distancias[grafo.Nvertices];
+    int* antecessores = (int*) calloc(grafo.Nvertices, sizeof(int));
+    int* distancias = (int*) calloc(grafo.Nvertices, sizeof(int));
     int abertos[grafo.Nvertices];
     for(int i = 0;i < grafo.Nvertices;i++){
         distancias[i] = INFINITO;
@@ -358,15 +358,19 @@ void exibirDijkstra(char* valorCampo,Grafo grafo){
     int *distancias = resultado[0]; // ditancias 1, distancia da origem ate a posicao 1
     int *posAnterior = resultado[1]; // posicao 1 tem o cara anterior a posicao 1
     for (int i = 0; i < grafo.Nvertices; i++){
-       if(i != Origem){
-            strcpy(auxAnt.nome, grafo.adj[posAnterior[i]]->v.nome);
-            strcpy(auxAnt.estado, grafo.adj[posAnterior[i]]->v.estado);
-            printf("%s %s %s %s %d %s %s \n",aux.nome,aux.estado,grafo.adj[i]->v.nome,grafo.adj[i]->v.estado,distancias[i],auxAnt.nome,auxAnt.estado);
-       }
+        if(i == Origem){
+            continue;
+        }
+        strcpy(auxAnt.nome, grafo.adj[posAnterior[i]]->v.nome);
+        strcpy(auxAnt.estado, grafo.adj[posAnterior[i]]->v.estado);
+//        printf("%d\n", distancias[i]);
+        printf("%s %s %s %s %d %s %s\n",aux.nome,aux.estado,grafo.adj[i]->v.nome,grafo.adj[i]->v.estado,distancias[i],auxAnt.nome,auxAnt.estado);
+
     }
     //printf("%s %s ",aux.nome,aux.estado);
 
 }
+
 
 int verificaVertices(int *arvore,int tamanho){
     for(int i = 0;i < tamanho;i++){
