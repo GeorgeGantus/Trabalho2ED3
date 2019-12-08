@@ -6,6 +6,59 @@ struct vertice{
     char nome[50];
 
 };
+struct Cabecalho{
+    char status; // consistência do arquivo de dados, '0' => arquivo de dados está inconsistente ou ‘1’=> arquivo de dados está consistente.
+    int numeroVertices; // indica o número de cidades diferentes que estão armazenadas no arquivo de dados, 0 => nenhum registro.
+    int numeroArestas; // indica o número de registros que estão armazenados no arquivo de dados, 0 => nenhum registro.
+    char dataUltimaCompactacao[11]; // formato DD/MM/AAAA, ‘##/##/####’ foi carregado com dados pela primeira vez
+};
+typedef struct Cabecalho Cabecalho;
+/* Struct que define o registro de dados*/
+/* Tamanho fixo de registro de 85 bytes.*/
+struct Dados{
+    int RRN; // numero relativo de registro.
+    char estadoOrigem[3]; // tamanho fixo 2 bytes, o 3 é o "\0".
+    char estadoDestino[3]; // tamanho fixo 2 bytes, o 3 é o "\0".
+    int distancia; // tamanho fixo 4 bytes.
+    char cidadeOrigem[100]; // tamanho variavel, delimitador entre campos pipe "|", lixo = "#"
+    char cidadeDestino[100]; // tamanho variavel, delimitador entre campos pipe "|".
+    char tempoViagem[100]; // tamanho variavel, delimitador entre campos pipe "|".
+};
+typedef struct Dados Dados;
+void lerAtePipe(char *campo,FILE *file){
+    char c;
+    int contador = 0;
+    fread(&c,1,1,file);
+    while(c != '|'){ /* lê chars até encontrar um | */
+        campo[contador] = c; /*escrevemos o valor do campo ate ser encontrado o |*/
+        contador ++;
+        fread(&c,1,1,file);
+    }
+    campo[contador] = '\0';
+
+}
+struct Cabecalho leCabecalho(FILE *file){ /*Função que retorna uma struct cabeçalho depois de lida*/
+    struct Cabecalho r;
+    r.dataUltimaCompactacao[10] = '\0';
+    rewind(file); // volta a posicao do cursor para o começo do arquivo
+    fread(&r.status,1,1,file);
+    fread(&r.numeroVertices,4,1,file);
+    fread(&r.numeroArestas,4,1,file);
+    fread(&r.dataUltimaCompactacao,10,1,file);
+    rewind(file); /*Volta a posição do cursor para o inicio do arquivo.*/
+    return r;
+}
+void lerRegistro(FILE *file,struct Dados *r){ /*Função responsável por ler um registro e retorna um ponteiro para seu endereço*/
+    struct Dados registro;
+    fread(registro.estadoOrigem,2,1,file);
+    fread(registro.estadoDestino,2,1,file);
+    fread(&registro.distancia,4,1,file);
+    //Campos de tamanhoVariavel ------>Ler ate o delimitador char a char
+    lerAtePipe(registro.cidadeOrigem,file);
+    lerAtePipe(registro.cidadeDestino,file);
+    lerAtePipe(registro.tempoViagem,file);
+    *r = registro;
+}
 typedef struct no **ListaDeAdj;//Vetor com a lista de Adj
 typedef struct vertice Vertice;
 typedef struct grafo Grafo;
@@ -55,6 +108,25 @@ void insereVerticeOrdenado(Vertice v,Grafo *grafo,ListaDeAdj lista){//Supoe que 
         aux1 = aux2;
     }
 }
+void insereArestaOrdenado(ListaDeAdj lista,int indice,Vertice v,int peso){//Precisa Testar
+    link vetor = lista[indice];
+    link aux;
+    if(vetor->prox == NULL){
+        vetor->prox = addNo(v,NULL,peso);
+        return;
+    }
+    int a;
+    while (vetor->prox != NULL && strcmp(v.nome,vetor->prox->v.nome) > 0){
+        vetor = vetor->prox;
+    }//O proximo cara é maior ou igual a mim ou null
+    if(vetor->prox == NULL){
+        vetor->prox = addNo(v,NULL,peso);
+        return;
+    }
+    //Se chegou ate aqui o proximo cara é o cara com igual maior ou igual a mim 
+    aux = vetor->prox;
+    vetor->prox = addNo(v,aux,peso);
+}
 int buscaRetIndice(ListaDeAdj lista,Vertice v,int nVertices){//nVertives = nAtual de vertices Busca Binária
   int inf = 0;
      int sup = nVertices-1;
@@ -73,7 +145,60 @@ int buscaRetIndice(ListaDeAdj lista,Vertice v,int nVertices){//nVertives = nAtua
      }
      return -1; 
 }
-
+link MenorAresta(ListaDeAdj lista,int indice){
+    link aux = lista[indice];
+    link ret = lista[indice];
+    int pesoMinimo;
+    if(aux->prox == NULL){
+        return ret;
+    }
+    aux = aux->prox;
+    pesoMinimo == aux->peso;
+    while(aux != NULL){
+        if(aux->peso < pesoMinimo){
+            ret = aux;
+        }
+        aux=aux->prox;
+    }
+    return ret;
+}
+void GerarGrafo(Grafo *grafo,char *nomeArquivo){
+    Dados aux;
+    Vertice v1;
+    Vertice v2;
+    link aresta;
+    int indice;
+    FILE *file = fopen(nomeArquivo,"rb");
+    Cabecalho c = leCabecalho(file);
+    grafo->nArestas = 0;
+    grafo->Nvertices = 0;
+    if(c.status == 0){
+        printf("Mensagem de erro");//ARQUIVO A ZOADO PRINTAR ERRO
+        return;
+    }
+    grafo->adj = calloc(c.numeroVertices,sizeof(link));
+    fseek(file,19,SEEK_SET);
+    while (!feof(file)){
+        lerRegistro(file,&aux);
+        if(aux.estadoOrigem[0] == '*'){
+            continue;
+        }
+        strcpy(v1.nome,aux.cidadeOrigem);
+        strcpy(v1.estado,aux.estadoOrigem);
+        strcpy(v2.nome,aux.cidadeDestino);
+        strcpy(v2.estado,aux.estadoDestino);
+        if(buscaRetIndice(grafo->adj,v1,grafo->Nvertices) != -1){
+            insereVerticeOrdenado(v1,grafo,grafo->adj);
+        }
+        if(buscaRetIndice(grafo->adj,v2,grafo->Nvertices) != -1){
+            insereVerticeOrdenado(v2,grafo,grafo->adj);
+        }
+        indice = buscaRetIndice(grafo->adj,v1,grafo->Nvertices);
+        insereArestaOrdenado(grafo->adj,indice,v2,aux.distancia);//insere no vertice 1 a aresta que vai ate a 2 com oseu respectivo peso
+    }
+    fclose(file);
+    
+}
 int main(int argc, char const *argv[])
 {
    Vertice v1;
