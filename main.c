@@ -471,7 +471,6 @@ int main(int argc, char const *argv[])
         if(GerarGrafo(&grafo,nomeArq)){
             exibirDijkstra(valorCampo,grafo);
         }
-        exibirDijkstra(valorCampo,grafo);
     break;
     case 11:
         scanf("%s",nomeArq); /* Digita o nome do arquivo csv.*/
