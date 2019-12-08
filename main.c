@@ -6,6 +6,7 @@
 struct vertice{
     char estado[3];
     char nome[50];
+
 };
 struct Cabecalho{
     char status; // consistência do arquivo de dados, '0' => arquivo de dados está inconsistente ou ‘1’=> arquivo de dados está consistente.
@@ -217,7 +218,7 @@ link MenorAresta(ListaDeAdj lista,int indice){
     }
     return ret;
 }
-int GerarGrafo(Grafo *grafo,char *nomeArquivo){
+void GerarGrafo(Grafo *grafo,char *nomeArquivo){
     Dados aux;
     Vertice v1;
     Vertice v2;
@@ -226,15 +227,15 @@ int GerarGrafo(Grafo *grafo,char *nomeArquivo){
     int contador = 0;
     FILE *file = fopen(nomeArquivo,"rb");
     if(!file){
-        printf("Falha no carregamento do arquivo.");
-        return 0; // caso tenha ocorrido algum erro com o arquivo, retorna 0
+        printf("Falha no carregamento do arquivo.\n");
+        return; // caso tenha ocorrido algum erro com o arquivo, retorna 0
     }
     Cabecalho c = leCabecalho(file);
     grafo->nArestas = 0;
     grafo->Nvertices = 0;
     if(c.status == '0'){
-        printf("Falha no carregamento do arquivo.");//ARQUIVO A ZOADO PRINTAR ERRO
-        return 0;
+        printf("Falha no carregamento do arquivo.\n");//ARQUIVO A ZOADO PRINTAR ERRO
+        return;
     }
     grafo->adj = calloc(c.numeroVertices,sizeof(link));
     fseek(file,19,SEEK_SET);
@@ -265,7 +266,6 @@ int GerarGrafo(Grafo *grafo,char *nomeArquivo){
     }
     fclose(file);
 
-    return 1;
 }
 
 void imprimeGrafo(Grafo grafo){
@@ -371,6 +371,7 @@ void exibirDijkstra(char* valorCampo,Grafo grafo){
 
 }
 
+
 int verificaVertices(int *arvore,int tamanho){
     for(int i = 0;i < tamanho;i++){
         if(arvore[i] == -1){
@@ -392,6 +393,9 @@ pseudoAresta *prim(char* nomeCidadeOrigem,Grafo grafo){
         arvore[i] = -1;
     }
     int indice = buscaRetIndice(grafo.adj,aux,grafo.Nvertices);
+    if(indice == -1){
+        return NULL;
+    }
     arvore[indice] = 1;
     int j = 0;
     while(!verificaVertices(arvore,grafo.Nvertices)){
@@ -419,6 +423,9 @@ pseudoAresta *prim(char* nomeCidadeOrigem,Grafo grafo){
             strcpy(auxAresta[j].tempoViagem,auxAresta->tempoViagem);
             arvore[auxAresta[j].indiceDestino] = 1;
             j++;
+            for(int i=0;i<j;i++){
+                printf("%d %d %d %s\n",auxAresta[i].indiceOrigem,auxAresta[i].indiceOrigem,auxAresta[i].peso,auxAresta.tempoViagem);
+            }
     }
     return auxAresta;
 }
@@ -443,7 +450,8 @@ void exibirPrim(char* valorCampo,Grafo grafo){
 
 }
 
-int main(int argc, char const *argv[]){
+int main(int argc, char const *argv[])
+{
   Grafo grafo;
   char nomeArq[50];
   char cidadeOrigm[50];
@@ -460,19 +468,22 @@ int main(int argc, char const *argv[]){
         scanf("%s",nomeArq); /* Digita o nome do arquivo csv.*/
         scanf("%s",cidadeOrigm);
         scan_quote_string(valorCampo);
-        if(GerarGrafo(&grafo,nomeArq)){
-            exibirDijkstra(valorCampo,grafo);
-        }
+        GerarGrafo(&grafo,nomeArq);
+        exibirDijkstra(valorCampo,grafo);
     break;
     case 11:
         scanf("%s",nomeArq); /* Digita o nome do arquivo csv.*/
         scanf("%s",cidadeOrigm);
         scan_quote_string(valorCampo);
-        if(GerarGrafo(&grafo,nomeArq)){
-            exibirPrim(valorCampo,grafo);
+        GerarGrafo(&grafo,nomeArq);
+        imprimeGrafo(grafo);
+        if(prim(valorCampo,grafo) == NULL){
+            printf("Cidade inexistente.");
         }
+
+        //exibirPrim(valorCampo,grafo);
     break;
 
   }
-   return 0;
+   return 1;
 }
