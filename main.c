@@ -34,7 +34,7 @@ void lerAtePipe(char *campo,FILE *file){
         contador ++;
         fread(&c,1,1,file);
     }
-    campo[contador] = '\0';
+    campo[contador] = 0;
 
 }
 struct Cabecalho leCabecalho(FILE *file){ /*Função que retorna uma struct cabeçalho depois de lida*/
@@ -52,6 +52,7 @@ void lerRegistro(FILE *file,struct Dados *r){ /*Função responsável por ler um
     struct Dados registro;
     fread(registro.estadoOrigem,2,1,file);
     fread(registro.estadoDestino,2,1,file);
+    registro.estadoDestino[2] = registro.estadoOrigem[2] = '\0';
     fread(&registro.distancia,4,1,file);
     //Campos de tamanhoVariavel ------>Ler ate o delimitador char a char
     lerAtePipe(registro.cidadeOrigem,file);
@@ -78,7 +79,7 @@ link addNo(Vertice v,link prox,int peso){//Cria um novo no em um vetor da Lista,
     a->prox = prox;
     a->v = v;
     a->peso = peso;
-    return a;   
+    return a;
 }
 void insereVerticeOrdenado(Vertice v,Grafo *grafo,ListaDeAdj lista){//Supoe que a lista ja esteja alocada na memoria depois de ler o cabecalho do arquivo
     link novo = addNo(v,NULL,-1);
@@ -88,7 +89,7 @@ void insereVerticeOrdenado(Vertice v,Grafo *grafo,ListaDeAdj lista){//Supoe que 
     if(grafo->Nvertices == 0){
         lista[0] = novo;
         grafo->Nvertices++;
-        return; 
+        return;
     }
     while(i < grafo->Nvertices && strcmp(v.nome,lista[i]->v.nome) > 0){
         i++;
@@ -102,7 +103,7 @@ void insereVerticeOrdenado(Vertice v,Grafo *grafo,ListaDeAdj lista){//Supoe que 
     aux1 = lista[i];
     lista[i] = novo;
     i++;
-    for(i;i < grafo->Nvertices;i++){//faz o shift no vetor
+    for(i = i;i < grafo->Nvertices;i++){//faz o shift no vetor
         aux2 = lista[i];
         lista[i] = aux1;
         aux1 = aux2;
@@ -115,7 +116,6 @@ void insereArestaOrdenado(ListaDeAdj lista,int indice,Vertice v,int peso){//Prec
         vetor->prox = addNo(v,NULL,peso);
         return;
     }
-    int a;
     while (vetor->prox != NULL && strcmp(v.nome,vetor->prox->v.nome) > 0){
         vetor = vetor->prox;
     }//O proximo cara é maior ou igual a mim ou null
@@ -123,7 +123,7 @@ void insereArestaOrdenado(ListaDeAdj lista,int indice,Vertice v,int peso){//Prec
         vetor->prox = addNo(v,NULL,peso);
         return;
     }
-    //Se chegou ate aqui o proximo cara é o cara com igual maior ou igual a mim 
+    //Se chegou ate aqui o proximo cara é o cara com igual maior ou igual a mim
     aux = vetor->prox;
     vetor->prox = addNo(v,aux,peso);
 }
@@ -143,7 +143,7 @@ int buscaRetIndice(ListaDeAdj lista,Vertice v,int nVertices){//nVertives = nAtua
           }else
                inf = meio+1;
      }
-     return -1; 
+     return -1;
 }
 link MenorAresta(ListaDeAdj lista,int indice){
     link aux = lista[indice];
@@ -153,7 +153,7 @@ link MenorAresta(ListaDeAdj lista,int indice){
         return ret;
     }
     aux = aux->prox;
-    pesoMinimo == aux->peso;
+    pesoMinimo = aux->peso;
     while(aux != NULL){
         if(aux->peso < pesoMinimo){
             ret = aux;
@@ -166,41 +166,50 @@ void GerarGrafo(Grafo *grafo,char *nomeArquivo){
     Dados aux;
     Vertice v1;
     Vertice v2;
-    link aresta;
     int indice;
+    int rrn = 0;
+    int contador = 0;
     FILE *file = fopen(nomeArquivo,"rb");
     Cabecalho c = leCabecalho(file);
     grafo->nArestas = 0;
     grafo->Nvertices = 0;
-    if(c.status == 0){
-        printf("Mensagem de erro");//ARQUIVO A ZOADO PRINTAR ERRO
+    if(c.status == '0'){
+        printf("Falha no carregamento do arquivo.");//ARQUIVO A ZOADO PRINTAR ERRO
         return;
     }
     grafo->adj = calloc(c.numeroVertices,sizeof(link));
     fseek(file,19,SEEK_SET);
-    while (!feof(file)){
+    while (rrn < c.numeroArestas){
         lerRegistro(file,&aux);
         if(aux.estadoOrigem[0] == '*'){
+            contador++;
+            fseek(file,(contador*85)+19,SEEK_SET);
             continue;
         }
         strcpy(v1.nome,aux.cidadeOrigem);
-        strcpy(v1.estado,aux.estadoOrigem);
+        strncpy(v1.estado,aux.estadoOrigem,2);
         strcpy(v2.nome,aux.cidadeDestino);
-        strcpy(v2.estado,aux.estadoDestino);
-        if(buscaRetIndice(grafo->adj,v1,grafo->Nvertices) != -1){
+        strncpy(v2.estado,aux.estadoDestino,2);
+        if(buscaRetIndice(grafo->adj,v1,grafo->Nvertices) == -1){
             insereVerticeOrdenado(v1,grafo,grafo->adj);
         }
-        if(buscaRetIndice(grafo->adj,v2,grafo->Nvertices) != -1){
+        if(buscaRetIndice(grafo->adj,v2,grafo->Nvertices) == -1){
             insereVerticeOrdenado(v2,grafo,grafo->adj);
         }
         indice = buscaRetIndice(grafo->adj,v1,grafo->Nvertices);
         insereArestaOrdenado(grafo->adj,indice,v2,aux.distancia);//insere no vertice 1 a aresta que vai ate a 2 com oseu respectivo peso
+        indice = buscaRetIndice(grafo->adj,v2,grafo->Nvertices);
+        insereArestaOrdenado(grafo->adj,indice,v1,aux.distancia);
+        rrn++;
+        contador++;
+        fseek(file,(contador*85)+19,SEEK_SET);
     }
     fclose(file);
-    
+
 }
 int main(int argc, char const *argv[])
 {
+    /*
    Vertice v1;
    strcpy(v1.nome,"acidade");
    Vertice v2;
@@ -209,6 +218,8 @@ int main(int argc, char const *argv[])
    strcpy(v3.nome,"dcidade");
    Vertice v4;
    strcpy(v4.nome,"ccidade");
+    Vertice v5;
+   strcpy(v5.nome,"TESTE");
    Grafo grafo;
    grafo.Nvertices = 0;
    grafo.adj = malloc(4*sizeof(link));
@@ -216,6 +227,11 @@ int main(int argc, char const *argv[])
    insereVerticeOrdenado(v2,&grafo,grafo.adj);
    insereVerticeOrdenado(v3,&grafo,grafo.adj);
    insereVerticeOrdenado(v4,&grafo,grafo.adj);
-   int d = buscaRetIndice(grafo.adj,v3,grafo.Nvertices);
+   int d = buscaRetIndice(grafo.adj,v5,grafo.Nvertices);
+   //Ate aqui ta fino
    printf("%d",d);
+    */
+   Grafo grafo;
+   char nome[50] =  "caso03.bin";
+   GerarGrafo(&grafo,nome);
 }
