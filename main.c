@@ -218,7 +218,7 @@ link MenorAresta(ListaDeAdj lista,int indice){
     }
     return ret;
 }
-void GerarGrafo(Grafo *grafo,char *nomeArquivo){
+int GerarGrafo(Grafo *grafo,char *nomeArquivo){
     Dados aux;
     Vertice v1;
     Vertice v2;
@@ -228,14 +228,14 @@ void GerarGrafo(Grafo *grafo,char *nomeArquivo){
     FILE *file = fopen(nomeArquivo,"rb");
     if(!file){
         printf("Falha no carregamento do arquivo.\n");
-        return; // caso tenha ocorrido algum erro com o arquivo, retorna 0
+        return 0; // caso tenha ocorrido algum erro com o arquivo, retorna 0
     }
     Cabecalho c = leCabecalho(file);
     grafo->nArestas = 0;
     grafo->Nvertices = 0;
     if(c.status == '0'){
         printf("Falha no carregamento do arquivo.\n");//ARQUIVO A ZOADO PRINTAR ERRO
-        return;
+        return 0;
     }
     grafo->adj = calloc(c.numeroVertices,sizeof(link));
     fseek(file,19,SEEK_SET);
@@ -265,7 +265,7 @@ void GerarGrafo(Grafo *grafo,char *nomeArquivo){
         fseek(file,(contador*85)+19,SEEK_SET);
     }
     fclose(file);
-
+    return 1;
 }
 
 void imprimeGrafo(Grafo grafo){
