@@ -424,7 +424,7 @@ pseudoAresta *prim(char* nomeCidadeOrigem,Grafo grafo){
             arvore[auxAresta[j].indiceDestino] = 1;
             j++;
             for(int i=0;i<j;i++){
-                printf("%d %d %d %s\n",auxAresta[i].indiceOrigem,auxAresta[i].indiceOrigem,auxAresta[i].peso,auxAresta.tempoViagem);
+                printf("%d %d %d %s\n",auxAresta[i].indiceOrigem,auxAresta[i].indiceOrigem,auxAresta[i].peso,auxAresta->tempoViagem);
             }
     }
     return auxAresta;
@@ -468,7 +468,9 @@ int main(int argc, char const *argv[])
         scanf("%s",nomeArq); /* Digita o nome do arquivo csv.*/
         scanf("%s",cidadeOrigm);
         scan_quote_string(valorCampo);
-        GerarGrafo(&grafo,nomeArq);
+        if(GerarGrafo(&grafo,nomeArq)){
+            exibirDijkstra(valorCampo,grafo);
+        }
         exibirDijkstra(valorCampo,grafo);
     break;
     case 11:
