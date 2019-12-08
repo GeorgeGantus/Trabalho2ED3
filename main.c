@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#define INFINITO 999999
 struct vertice{
-    char estado[2];
+    char estado[3];
     char nome[50];
 
 };
@@ -25,6 +26,16 @@ struct Dados{
     char tempoViagem[100]; // tamanho variavel, delimitador entre campos pipe "|".
 };
 typedef struct Dados Dados;
+int menorValor(int a,int b){
+    if(b < 0){
+        return a;
+    }
+    if(a < b){
+        return a;
+    }
+    return b;
+    
+}
 void lerAtePipe(char *campo,FILE *file){
     char c;
     int contador = 0;
@@ -71,18 +82,20 @@ struct grafo{
 typedef struct no *link;
 struct no{
     int peso;//
+    char tempoviagem[50];
     Vertice v;
     link prox;
 };//Ponteiro para o proximo no da lista de adj
-link addNo(Vertice v,link prox,int peso){//Cria um novo no em um vetor da Lista, recebe o vertice que eu sou e pra quem eu aponto,Me retorna
+link addNo(Vertice v,link prox,int peso,char *tempoviagem){//Cria um novo no em um vetor da Lista, recebe o vertice que eu sou e pra quem eu aponto,Me retorna
     link a = malloc(sizeof(struct no));
     a->prox = prox;
     a->v = v;
     a->peso = peso;
+    strncpy(a->tempoviagem,tempoviagem,50);
     return a;
 }
 void insereVerticeOrdenado(Vertice v,Grafo *grafo,ListaDeAdj lista){//Supoe que a lista ja esteja alocada na memoria depois de ler o cabecalho do arquivo
-    link novo = addNo(v,NULL,-1);
+    link novo = addNo(v,NULL,-1,"0");
     link aux1;
     link aux2;
     int i = 0;
@@ -109,23 +122,23 @@ void insereVerticeOrdenado(Vertice v,Grafo *grafo,ListaDeAdj lista){//Supoe que 
         aux1 = aux2;
     }
 }
-void insereArestaOrdenado(ListaDeAdj lista,int indice,Vertice v,int peso){//Precisa Testar
+void insereArestaOrdenado(ListaDeAdj lista,int indice,Vertice v,int peso,char *tempoviagem){//Precisa Testar
     link vetor = lista[indice];
     link aux;
     if(vetor->prox == NULL){
-        vetor->prox = addNo(v,NULL,peso);
+        vetor->prox = addNo(v,NULL,peso,tempoviagem);
         return;
     }
     while (vetor->prox != NULL && strcmp(v.nome,vetor->prox->v.nome) > 0){
         vetor = vetor->prox;
     }//O proximo cara é maior ou igual a mim ou null
     if(vetor->prox == NULL){
-        vetor->prox = addNo(v,NULL,peso);
+        vetor->prox = addNo(v,NULL,peso,tempoviagem);
         return;
     }
     //Se chegou ate aqui o proximo cara é o cara com igual maior ou igual a mim
     aux = vetor->prox;
-    vetor->prox = addNo(v,aux,peso);
+    vetor->prox = addNo(v,aux,peso,tempoviagem);
 }
 int buscaRetIndice(ListaDeAdj lista,Vertice v,int nVertices){//nVertives = nAtual de vertices Busca Binária
   int inf = 0;
@@ -187,9 +200,9 @@ void GerarGrafo(Grafo *grafo,char *nomeArquivo){
             continue;
         }
         strcpy(v1.nome,aux.cidadeOrigem);
-        strncpy(v1.estado,aux.estadoOrigem,2);
+        strncpy(v1.estado,aux.estadoOrigem,3);
         strcpy(v2.nome,aux.cidadeDestino);
-        strncpy(v2.estado,aux.estadoDestino,2);
+        strncpy(v2.estado,aux.estadoDestino,3);
         if(buscaRetIndice(grafo->adj,v1,grafo->Nvertices) == -1){
             insereVerticeOrdenado(v1,grafo,grafo->adj);
         }
@@ -197,15 +210,88 @@ void GerarGrafo(Grafo *grafo,char *nomeArquivo){
             insereVerticeOrdenado(v2,grafo,grafo->adj);
         }
         indice = buscaRetIndice(grafo->adj,v1,grafo->Nvertices);
-        insereArestaOrdenado(grafo->adj,indice,v2,aux.distancia);//insere no vertice 1 a aresta que vai ate a 2 com oseu respectivo peso
+        insereArestaOrdenado(grafo->adj,indice,v2,aux.distancia,aux.tempoViagem);//insere no vertice 1 a aresta que vai ate a 2 com oseu respectivo peso
         indice = buscaRetIndice(grafo->adj,v2,grafo->Nvertices);
-        insereArestaOrdenado(grafo->adj,indice,v1,aux.distancia);
+        insereArestaOrdenado(grafo->adj,indice,v1,aux.distancia,aux.tempoViagem);
         rrn++;
         contador++;
         fseek(file,(contador*85)+19,SEEK_SET);
     }
     fclose(file);
 
+}
+
+void imprimeGrafo(Grafo grafo){
+   link aux;
+   int i=0;
+   for (i = 0; i < grafo.Nvertices; i++){
+    aux = grafo.adj[i];
+    while(aux!=NULL){
+        if(aux->peso == -1){
+            printf("%s %s ",aux->v.estado,aux->v.nome);
+            aux=aux->prox;
+        }
+        printf("%s %s %d %s ",aux->v.estado,aux->v.nome,aux->peso,aux->tempoviagem);
+        aux=aux->prox;
+    }  
+    printf("\n"); 
+   }
+}
+int verificaAbertos(int *abertos,int tamanho){
+    for(int i = 0;i<tamanho;i++){
+        if(abertos[i] == 1){
+            return 1;
+        }
+    }
+    return 0;
+}
+int **djkstra(char* nomeCidadeOrigem,Grafo grafo){
+    Vertice aux;
+    int menor = INFINITO;
+    int indiceaux;
+    int indiceatual;
+    link arestaAux;
+    strcpy(aux.nome,nomeCidadeOrigem);
+    int antecessores[grafo.Nvertices];
+    int distancias[grafo.Nvertices];
+    int abertos[grafo.Nvertices];
+    for(int i = 0;i < grafo.Nvertices;i++){
+        distancias[i] = INFINITO;
+        antecessores[i] = -1;
+        abertos[i] = 1;
+    }
+    int posicao = buscaRetIndice(grafo.adj,aux,grafo.Nvertices);
+    antecessores[posicao] = posicao;
+    distancias[posicao] = 0;
+    while(verificaAbertos(abertos,grafo.Nvertices)){
+        menor = INFINITO;
+        for(int i = 0;i<grafo.Nvertices;i++){
+            if(distancias[i] < menor && abertos[i] == 1){
+                menor = distancias[i];
+                indiceatual = i;
+            }
+        }
+            abertos[indiceatual] = 0;
+            arestaAux = grafo.adj[indiceatual];
+            if(arestaAux->prox == NULL){//Se tiver um no isolado entra em loop infinito
+                continue;
+            }
+            arestaAux = arestaAux->prox;
+            
+            while(arestaAux != NULL){
+                indiceaux = buscaRetIndice(grafo.adj,arestaAux->v,grafo.Nvertices);
+                if(distancias[indiceatual]+arestaAux->peso < distancias[indiceaux]){
+                    distancias[indiceaux] = distancias[indiceatual]+arestaAux->peso;
+                    antecessores[indiceaux] = indiceatual;
+                }
+
+            }
+    }
+    //retorna o vetor distancias e o vetor antecessores
+    int **retorno = calloc(2,sizeof(int*));
+    retorno[0] = distancias;
+    retorno[1] = antecessores;
+    return retorno;
 }
 int main(int argc, char const *argv[])
 {
@@ -234,4 +320,5 @@ int main(int argc, char const *argv[])
    Grafo grafo;
    char nome[50] =  "caso03.bin";
    GerarGrafo(&grafo,nome);
+   imprimeGrafo(grafo);
 }
