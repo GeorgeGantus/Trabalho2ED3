@@ -6,7 +6,6 @@
 struct vertice{
     char estado[3];
     char nome[50];
-
 };
 struct Cabecalho{
     char status; // consistência do arquivo de dados, '0' => arquivo de dados está inconsistente ou ‘1’=> arquivo de dados está consistente.
@@ -218,7 +217,7 @@ link MenorAresta(ListaDeAdj lista,int indice){
     }
     return ret;
 }
-void GerarGrafo(Grafo *grafo,char *nomeArquivo){
+int GerarGrafo(Grafo *grafo,char *nomeArquivo){
     Dados aux;
     Vertice v1;
     Vertice v2;
@@ -228,14 +227,14 @@ void GerarGrafo(Grafo *grafo,char *nomeArquivo){
     FILE *file = fopen(nomeArquivo,"rb");
     if(!file){
         printf("Falha no carregamento do arquivo.");
-        return; // caso tenha ocorrido algum erro com o arquivo, retorna 0
+        return 0; // caso tenha ocorrido algum erro com o arquivo, retorna 0
     }
     Cabecalho c = leCabecalho(file);
     grafo->nArestas = 0;
     grafo->Nvertices = 0;
     if(c.status == '0'){
         printf("Falha no carregamento do arquivo.");//ARQUIVO A ZOADO PRINTAR ERRO
-        return;
+        return 0;
     }
     grafo->adj = calloc(c.numeroVertices,sizeof(link));
     fseek(file,19,SEEK_SET);
@@ -266,6 +265,7 @@ void GerarGrafo(Grafo *grafo,char *nomeArquivo){
     }
     fclose(file);
 
+    return 1;
 }
 
 void imprimeGrafo(Grafo grafo){
@@ -371,7 +371,6 @@ void exibirDijkstra(char* valorCampo,Grafo grafo){
 
 }
 
-
 int verificaVertices(int *arvore,int tamanho){
     for(int i = 0;i < tamanho;i++){
         if(arvore[i] == -1){
@@ -444,8 +443,7 @@ void exibirPrim(char* valorCampo,Grafo grafo){
 
 }
 
-int main(int argc, char const *argv[])
-{
+int main(int argc, char const *argv[]){
   Grafo grafo;
   char nomeArq[50];
   char cidadeOrigm[50];
@@ -462,18 +460,19 @@ int main(int argc, char const *argv[])
         scanf("%s",nomeArq); /* Digita o nome do arquivo csv.*/
         scanf("%s",cidadeOrigm);
         scan_quote_string(valorCampo);
-        GerarGrafo(&grafo,nomeArq);
-        exibirDijkstra(valorCampo,grafo);
+        if(GerarGrafo(&grafo,nomeArq)){
+            exibirDijkstra(valorCampo,grafo);
+        }
     break;
     case 11:
         scanf("%s",nomeArq); /* Digita o nome do arquivo csv.*/
         scanf("%s",cidadeOrigm);
         scan_quote_string(valorCampo);
-        GerarGrafo(&grafo,nomeArq);
-        prim(valorCampo,grafo);
-        //exibirPrim(valorCampo,grafo);
+        if(GerarGrafo(&grafo,nomeArq)){
+            exibirPrim(valorCampo,grafo);
+        }
     break;
 
   }
-   return 1;
+   return 0;
 }
