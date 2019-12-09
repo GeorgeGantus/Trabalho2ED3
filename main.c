@@ -183,7 +183,7 @@ void insereArestaOrdenado(ListaDeAdj lista,int indice,Vertice v,int peso,char *t
     aux = vetor->prox;
     vetor->prox = addNo(v,aux,peso,tempoviagem);
 }
-int buscaRetIndice(ListaDeAdj lista,Vertice v,int nVertices){//nVertives = nAtual de vertices Busca Binária
+int buscaRetIndice(ListaDeAdj lista,Vertice vert,int nVertices){//nVertives = nAtual de vertices Busca Binária
   int inf = 0;
      int sup = nVertices-1;
      int meio;
@@ -191,7 +191,7 @@ int buscaRetIndice(ListaDeAdj lista,Vertice v,int nVertices){//nVertives = nAtua
      while (inf <= sup)
      {
           meio = (inf + sup)/2;
-          aux = strcmp(v.nome,lista[meio]->v.nome);
+          aux = strcmp(vert.nome,lista[meio]->v.nome);
           if (aux == 0){
                return meio;
           }if (aux < 0){
@@ -400,15 +400,19 @@ pseudoAresta *prim(char* nomeCidadeOrigem,Grafo grafo){
     int j = 0;
     while(!verificaVertices(arvore,grafo.Nvertices)){
         menorPeso = INFINITO;
-        for(int i = 0;i < grafo.Nvertices;i++){
+        for(int i = 0; i < grafo.Nvertices; i++){
             if(arvore[i] == 1){//faz parte da arvore
+
                 arestaAux = grafo.adj[i];
-                if(arestaAux->prox == NULL){
-                    continue;
+                while(arestaAux){
+                    printf("%s ", arestaAux->v.nome);
+                    arestaAux = arestaAux->prox;
                 }
-                arestaAux = arestaAux->prox;
+                printf("\n");
+
+                arestaAux = grafo.adj[i]->prox;
                 while(arestaAux != NULL){
-                    if(arestaAux->peso < menorPeso && arvore[buscaRetIndice(grafo.adj,arestaAux->v,grafo.Nvertices)] != 1){
+                    if(arestaAux->peso < menorPeso && arvore[buscaRetIndice(grafo.adj, arestaAux->v, grafo.Nvertices)] != 1){
                         menorPeso = arestaAux->peso;
                         menorAresta = arestaAux;
                         indiceMenorPeso = i;
@@ -417,41 +421,45 @@ pseudoAresta *prim(char* nomeCidadeOrigem,Grafo grafo){
                 }
             }
         }
-            auxAresta[j].indiceOrigem = indiceMenorPeso;
-            auxAresta[j].indiceDestino = buscaRetIndice(grafo.adj,menorAresta->v,grafo.Nvertices);
-            auxAresta[j].peso = menorAresta->peso;
-            strcpy(auxAresta[j].tempoViagem,auxAresta->tempoViagem);
-            arvore[auxAresta[j].indiceDestino] = 1;
-            j++;
-            for(int i=0;i<j;i++){
-                printf("%d %d %d %s\n",auxAresta[i].indiceOrigem,auxAresta[i].indiceOrigem,auxAresta[i].peso,auxAresta->tempoViagem);
-            }
+        printf("\n");
+        auxAresta[j].indiceOrigem = indiceMenorPeso;
+        auxAresta[j].indiceDestino = buscaRetIndice(grafo.adj,menorAresta->v,grafo.Nvertices);
+        auxAresta[j].peso = menorAresta->peso;
+        strcpy(auxAresta[j].tempoViagem, menorAresta->tempoviagem);
+        arvore[auxAresta[j].indiceDestino] = 1;
+        j++;
     }
+    auxAresta[j].peso = -1;
     return auxAresta;
 }
 
 void exibirPrim(char* valorCampo,Grafo grafo){
-    Vertice aux;
-    Vertice auxAnt;
-    strcpy(aux.nome,valorCampo);
-    int Origem = buscaRetIndice(grafo.adj,aux,grafo.Nvertices);
-    strcpy(aux.estado, grafo.adj[Origem]->v.estado);
-    int **resultado = djkstra(valorCampo,grafo);
-    int *distancias = resultado[0]; // ditancias 1, distancia da origem ate a posicao 1
-    int *posAnterior = resultado[1]; // posicao 1 tem o cara anterior a posicao 1
-    for (int i = 0; i < grafo.Nvertices; i++){
-       if(i != Origem){
-            strcpy(auxAnt.nome, grafo.adj[posAnterior[i]]->v.nome);
-            strcpy(auxAnt.estado, grafo.adj[posAnterior[i]]->v.estado);
-            printf("%s %s %s %s %d %s %s \n",aux.nome,aux.estado,grafo.adj[i]->v.nome,grafo.adj[i]->v.estado,distancias[i],auxAnt.nome,auxAnt.estado);
-       }
+    pseudoAresta *retorno = prim(valorCampo,grafo);
+    printf("AQUI LEGAL\n");
+    int i = 0;
+    while(retorno[i].peso != -1){
+        i++;
     }
-    //printf("%s %s ",aux.nome,aux.estado);
-
+    Grafo prim;
+    prim.adj = calloc(i,sizeof(link));//talvez colocar -1
+    int j = 0;
+    while(retorno[j].peso != -1){
+        Vertice v1;
+        Vertice v2;
+        strcpy(v1.nome,grafo.adj[retorno[j].indiceOrigem]->v.nome);
+        strcpy(v2.nome,grafo.adj[retorno[j].indiceDestino]->v.nome);
+        if(buscaRetIndice(prim.adj,v1,i) == -1){
+            insereVerticeOrdenado(v1,&prim,prim.adj);
+        }
+        if(buscaRetIndice(prim.adj,v2,i) == -1){
+            insereVerticeOrdenado(v2,&prim,prim.adj);
+        }
+        insereArestaOrdenado(prim.adj,buscaRetIndice(prim.adj,v1,i),v2,retorno[j].peso,retorno[j].tempoViagem);
+    }
+    imprimeGrafo(prim);
 }
 
-int main(int argc, char const *argv[])
-{
+int main(int argc, char const *argv[]){
   Grafo grafo;
   char nomeArq[50];
   char cidadeOrigm[50];
@@ -477,10 +485,7 @@ int main(int argc, char const *argv[])
         scanf("%s",cidadeOrigm);
         scan_quote_string(valorCampo);
         GerarGrafo(&grafo,nomeArq);
-        imprimeGrafo(grafo);
-        if(prim(valorCampo,grafo) == NULL){
-            printf("Cidade inexistente.");
-        }
+        exibirPrim(valorCampo,grafo);
 
         //exibirPrim(valorCampo,grafo);
     break;
