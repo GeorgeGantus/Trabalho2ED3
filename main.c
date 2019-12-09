@@ -389,7 +389,6 @@ pseudoAresta *prim(char* nomeCidadeOrigem,Grafo grafo){
     int j =0;
     int indice = buscaRetIndice(grafo.adj,aux,grafo.Nvertices);
     if(indice == -1){
-        printf("Cidade inexistente.");
         return NULL;
     }
     pseudoAresta auxiliar;
@@ -428,6 +427,10 @@ pseudoAresta *prim(char* nomeCidadeOrigem,Grafo grafo){
 
 void exibirPrim(char* valorCampo,Grafo grafo){
     pseudoAresta *retorno = prim(valorCampo,grafo);
+    if(retorno == NULL){
+            printf("Cidade inexistente.");
+            return;
+    }
     int i = 0;
     while(retorno[i].peso != -1){
         i++;
