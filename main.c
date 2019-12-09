@@ -277,6 +277,7 @@ void imprimeGrafo(Grafo grafo){
         if(aux->peso == -1){
             printf("%s %s",aux->v.nome,aux->v.estado);
             aux=aux->prox;
+            continue;
         }
         if(!(strncmp(aux->tempoviagem,"\0",1))){
             printf(" %s %s %d",aux->v.nome,aux->v.estado,aux->peso);
@@ -381,66 +382,59 @@ int verificaVertices(int *arvore,int tamanho){
     return 1;
 }
 pseudoAresta *prim(char* nomeCidadeOrigem,Grafo grafo){
-    pseudoAresta *auxAresta = calloc(grafo.nArestas,sizeof(pseudoAresta));
     Vertice aux;
-    link arestaAux;
-    int menorPeso;
-    link menorAresta;
-    int indiceMenorPeso;
     strcpy(aux.nome,nomeCidadeOrigem);
+    link arestas = NULL;
     int arvore[grafo.Nvertices];
-    for(int i = 0;i < grafo.Nvertices;i++){
-        arvore[i] = -1;
-    }
+    int j =0;
     int indice = buscaRetIndice(grafo.adj,aux,grafo.Nvertices);
     if(indice == -1){
+        printf("Cidade inexistente.");
         return NULL;
     }
+    pseudoAresta auxiliar;
+    pseudoAresta *retorno = calloc(grafo.Nvertices,sizeof(pseudoAresta));
+    for(int i =0;i < grafo.Nvertices;i++){
+        arvore[i] = -1;
+    }
     arvore[indice] = 1;
-    int j = 0;
     while(!verificaVertices(arvore,grafo.Nvertices)){
-        menorPeso = INFINITO;
-        for(int i = 0; i < grafo.Nvertices; i++){
-            if(arvore[i] == 1){//faz parte da arvore
-
-                arestaAux = grafo.adj[i];
-                while(arestaAux){
-                    printf("%s ", arestaAux->v.nome);
-                    arestaAux = arestaAux->prox;
-                }
-                printf("\n");
-
-                arestaAux = grafo.adj[i]->prox;
-                while(arestaAux != NULL){
-                    if(arestaAux->peso < menorPeso && arvore[buscaRetIndice(grafo.adj, arestaAux->v, grafo.Nvertices)] != 1){
-                        menorPeso = arestaAux->peso;
-                        menorAresta = arestaAux;
-                        indiceMenorPeso = i;
+        auxiliar.peso = INFINITO;
+        for(int i =0;i<= grafo.Nvertices;i++){
+            if(arvore[i] == 1){//estou num vertice que eu tenho que analizar
+                arestas = grafo.adj[i]->prox;
+                while(arestas != NULL){
+                    if(arestas->peso < auxiliar.peso && arvore[buscaRetIndice(grafo.adj,arestas->v,grafo.Nvertices)] != 1){
+                        auxiliar.peso = arestas->peso;
+                        auxiliar.indiceDestino = buscaRetIndice(grafo.adj,arestas->v,grafo.Nvertices);
+                        auxiliar.indiceOrigem = i;
+                        strcpy(auxiliar.tempoViagem,arestas->tempoviagem);
                     }
-                    arestaAux = arestaAux->prox;
+                    arestas=arestas->prox;
                 }
             }
         }
-        printf("\n");
-        auxAresta[j].indiceOrigem = indiceMenorPeso;
-        auxAresta[j].indiceDestino = buscaRetIndice(grafo.adj,menorAresta->v,grafo.Nvertices);
-        auxAresta[j].peso = menorAresta->peso;
-        strcpy(auxAresta[j].tempoViagem, menorAresta->tempoviagem);
-        arvore[auxAresta[j].indiceDestino] = 1;
+        retorno[j].indiceOrigem = auxiliar.indiceOrigem;
+        retorno[j].indiceDestino = auxiliar.indiceDestino;
+        retorno[j].peso = auxiliar.peso;
+        strcpy(retorno[j].tempoViagem,auxiliar.tempoViagem);
+        arvore[retorno[j].indiceDestino] = 1;
         j++;
+
     }
-    auxAresta[j].peso = -1;
-    return auxAresta;
+    retorno[j].peso = -1;
+    return retorno;
 }
 
 void exibirPrim(char* valorCampo,Grafo grafo){
     pseudoAresta *retorno = prim(valorCampo,grafo);
-    printf("AQUI LEGAL\n");
     int i = 0;
     while(retorno[i].peso != -1){
         i++;
     }
     Grafo prim;
+    prim.Nvertices = 0;
+    prim.nArestas = 0;
     prim.adj = calloc(i,sizeof(link));//talvez colocar -1
     int j = 0;
     while(retorno[j].peso != -1){
@@ -448,14 +442,19 @@ void exibirPrim(char* valorCampo,Grafo grafo){
         Vertice v2;
         strcpy(v1.nome,grafo.adj[retorno[j].indiceOrigem]->v.nome);
         strcpy(v2.nome,grafo.adj[retorno[j].indiceDestino]->v.nome);
-        if(buscaRetIndice(prim.adj,v1,i) == -1){
+        strcpy(v1.estado,grafo.adj[retorno[j].indiceOrigem]->v.estado);
+        strcpy(v2.estado,grafo.adj[retorno[j].indiceDestino]->v.estado);
+        if(buscaRetIndice(prim.adj,v1,prim.Nvertices) == -1){
+
             insereVerticeOrdenado(v1,&prim,prim.adj);
         }
-        if(buscaRetIndice(prim.adj,v2,i) == -1){
+        if(buscaRetIndice(prim.adj,v2,prim.Nvertices) == -1){
             insereVerticeOrdenado(v2,&prim,prim.adj);
         }
-        insereArestaOrdenado(prim.adj,buscaRetIndice(prim.adj,v1,i),v2,retorno[j].peso,retorno[j].tempoViagem);
+        insereArestaOrdenado(prim.adj,buscaRetIndice(prim.adj,v1,prim.Nvertices),v2,retorno[j].peso,retorno[j].tempoViagem);
+        j++;
     }
+
     imprimeGrafo(prim);
 }
 
